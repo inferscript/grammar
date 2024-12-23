@@ -1,0 +1,11 @@
+{
+  "private": true,
+  "name": "@this-project/inferscript-grammar",
+  "scripts": {
+    "generate": "(cd is && tree-sitter generate) && (cd isx && tree-sitter generate)",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "tree-sitter-cli": "^0.24.5"
+  }
+}

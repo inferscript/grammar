@@ -1,0 +1,47 @@
+{
+  "grammars": [
+    {
+      "name": "inferscript",
+      "camelcase": "InferScript",
+      "scope": "source.inferscript",
+      "file-types": [
+        ".is"
+      ],
+      "injection-regex": "^(inferscript|is)$",
+      "path": "./is"
+    },
+    {
+      "name": "inferscriptreact",
+      "camelcase": "InferScriptReact",
+      "scope": "source.inferscriptreact",
+      "file-types": [
+        ".isx"
+      ],
+      "injection-regex": "^(inferscriptreact|isx)$",
+      "path": "./isx"
+    }
+  ],
+  "metadata": {
+    "version": "0.1.0",
+    "license": "MIT",
+    "description": "Inferscript grammar for tree-sitter",
+    "authors": [
+      {
+        "name": "Juyeong Maing",
+        "email": "mjy9088@naver.com",
+        "url": "https://github.com/mjy9088"
+      }
+    ],
+    "links": {
+      "repository": "https://github.com/inferscript/grammar"
+    }
+  },
+  "bindings": {
+    "c": true,
+    "go": true,
+    "node": true,
+    "python": true,
+    "rust": true,
+    "swift": true
+  }
+}
