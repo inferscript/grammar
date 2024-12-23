@@ -7,4 +7,8 @@
       "url": "https://tree-sitter.github.io/tree-sitter/assets/schemas/config.schema.json",
     },
   ],
+  "[javascript]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "vscode.typescript-language-features",
+  },
 }

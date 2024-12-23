@@ -19,6 +19,16 @@
       ],
       "injection-regex": "^(inferscriptreact|isx)$",
       "path": "./isx"
+    },
+    {
+      "name": "inferscriptdefinition",
+      "camelcase": "InferScriptDefinition",
+      "scope": "source.inferscriptdefinition",
+      "file-types": [
+        ".isd"
+      ],
+      "injection-regex": "^(inferscriptdefinition|isd)$",
+      "path": "./isd"
     }
   ],
   "metadata": {
