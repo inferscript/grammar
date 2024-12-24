@@ -39,6 +39,13 @@ module.exports = function defineGrammar(language) {
   return grammar({
     name: isIs ? 'inferscript' : isIsx ? 'inferscriptreact' : 'inferscriptdefinition',
 
+    externals: $ => [
+      $.template_literal_start_end,
+      $.template_literal_start,
+      $.template_literal_end,
+      $.template_literal_middle,
+    ],
+
     rules: {
       program: $ => repeat($._top_level_statement),
 
@@ -150,22 +157,39 @@ module.exports = function defineGrammar(language) {
       return_type: $ => choice(
         $.type,
         $.type_predicate,
+        $.type_and_asserts,
       ),
 
       type_predicate: $ => seq(
         optional(field('asserts', 'asserts')),
         field('name', $.identifier),
         'is',
+        field('asserts_type', $.type),
+      ),
+
+      type_and_asserts: $ => seq(
+        field('type', $.type),
+        'asserts',
+        field('name', $.identifier),
+        'is',
+        field('asserts_type', $.type),
+      ),
+
+      parameter: $ => choice(
+        $.named_parameter,
+        $.unnamed_parameter,
+      ),
+
+      named_parameter: $ => seq(
+        field('name', $.identifier),
+        optional(field('optional', '?')),
+        ':',
         field('type', $.type),
       ),
 
-      parameter: $ => seq(
-        field('name', $.identifier),
+      unnamed_parameter: $ => seq(
+        field('type', $.type),
         optional(field('optional', '?')),
-        optional(seq(
-          ':',
-          field('type', $.type),
-        )),
       ),
 
       object_type_field: $ => seq(
@@ -272,14 +296,27 @@ module.exports = function defineGrammar(language) {
         field('rhs', $.type),
       ),
 
-      template_literal_type: $ => seq(
-        '`',
-        'TODO', // TODO: implement this
-        '`',
+      template_literal_type: $ => choice(
+        $.template_literal_type_1,
+        $.template_literal_type_n,
+      ),
+
+      template_literal_type_1: $ => seq(
+        $.template_literal_start_end,
+      ),
+
+      template_literal_type_n: $ => seq(
+        $.template_literal_start,
+        $.type,
+        repeat(seq(
+          $.template_literal_middle,
+          $.type,
+        )),
+        $.template_literal_end,
       ),
 
       // Basic tokens
-      identifier: $ => /[a-zA-Z_][a-zA-Z0-9_]*/,
+      identifier: $ => /[a-zA-Z_@#$][a-zA-Z0-9@#$_]*/,
       number: $ => /[1-9][0-9]*/,
       string: $ => /"([^"\\]|\\.)*"/,
     },
