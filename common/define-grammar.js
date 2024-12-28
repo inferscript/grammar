@@ -46,6 +46,34 @@ module.exports = function defineGrammar(language) {
       $.template_literal_middle,
     ],
 
+    conflicts: $ => [
+      [$.named_parameter, $.type],
+      [$.unnamed_parameter, $.parenthesized_type],
+      [$.infer_type],
+      [$.intersection_type],
+      [$.union_type],
+    ],
+
+    precedences: $ => [
+      [
+        'generic_type',
+        'indexed_type',
+        'member_type',
+        'keyof_type',
+        'readonly_type',
+        'negated_type',
+        'infer_type',
+        'return_type',
+        'type_predicate',
+        'extends_type',
+        'function_type',
+        'call_signature',
+        'intersection_type',
+        'union_type',
+        'conditional_type',
+      ],
+    ],
+
     rules: {
       program: $ => repeat($._top_level_statement),
 
@@ -61,11 +89,7 @@ module.exports = function defineGrammar(language) {
           field('name', $.identifier),
           field('type_parameters', optional($.type_parameters)),
           '=',
-          field('value', $.type),
-          optional(seq(
-            'satisfies',
-            field('satisfies', $.type),
-          )),
+          field('type', $.type),
           ';',
         ),
         seq(
@@ -92,6 +116,7 @@ module.exports = function defineGrammar(language) {
       ),
 
       type_parameter: $ => seq(
+        optional(field('const', 'const')),
         field('name', $.identifier),
         field('type_parameters', optional($.type_parameters)),
         optional(seq(
@@ -144,7 +169,7 @@ module.exports = function defineGrammar(language) {
         $.object_type_mapped_field,
       ),
 
-      call_signature: $ => seq(
+      call_signature: $ => prec('call_signature', seq(
         optional(seq(
           optional(field('abstract', 'abstract')),
           field('new', 'new'),
@@ -155,28 +180,22 @@ module.exports = function defineGrammar(language) {
         ')',
         ':',
         field('return_type', $.return_type),
-      ),
+      )),
 
-      return_type: $ => choice(
+      return_type: $ => prec('return_type', choice(
         $.type,
         $.type_predicate,
-        $.type_and_asserts,
-      ),
+      )),
 
-      type_predicate: $ => seq(
-        optional(field('asserts', 'asserts')),
+      type_predicate: $ => prec('type_predicate', seq(
+        optional(seq(
+          optional(field('type', $.type)),
+          field('asserts', 'asserts')
+        )),
         field('name', $.identifier),
         'is',
         field('asserts_type', $.type),
-      ),
-
-      type_and_asserts: $ => seq(
-        field('type', $.type),
-        'asserts',
-        field('name', $.identifier),
-        'is',
-        field('asserts_type', $.type),
-      ),
+      )),
 
       parameter: $ => choice(
         $.named_parameter,
@@ -229,25 +248,25 @@ module.exports = function defineGrammar(language) {
         ')',
       ),
 
-      indexed_type: $ => seq(
+      indexed_type: $ => prec('indexed_type', seq(
         field('type', $.type),
         '[',
         field('subscript', $.type),
         ']',
-      ),
+      )),
 
-      member_type: $ => seq(
+      member_type: $ => prec('member_type', seq(
         field('type', $.type),
         '.',
         field('field', $.identifier),
-      ),
+      )),
 
-      generic_type: $ => seq(
+      generic_type: $ => prec('generic_type', seq(
         field('type', $.type),
         '<',
         separatedRepeat1($.type, 'type_parameter'),
         '>',
-      ),
+      )),
 
       array_type: $ => seq(
         field('type', $.type),
@@ -266,10 +285,10 @@ module.exports = function defineGrammar(language) {
         field('value', $.identifier),
       ),
 
-      keyof_type: $ => seq(
+      keyof_type: $ => prec('keyof_type', seq(
         'keyof',
         field('type', $.type),
-      ),
+      )),
 
       literal_type: $ => choice(
         $.number_literal_type,
@@ -280,24 +299,24 @@ module.exports = function defineGrammar(language) {
         'undefined',
       ),
 
-      negated_type: $ => seq(
+      negated_type: $ => prec('negated_type', seq(
         '!',
         field('type', $.type),
-      ),
+      )),
 
-      extends_type: $ => seq(
+      extends_type: $ => prec.right("extends_type", seq(
         field('from', $.type),
         'extends',
         field('to', $.type),
-      ),
+      )),
 
-      conditional_type: $ => seq(
+      conditional_type: $ => prec.right('conditional_type', seq(
         field('lhs', $.type),
         '?',
         field('chs', $.type),
         ':',
         field('rhs', $.type),
-      ),
+      )),
 
       template_literal_type: $ => choice(
         $.template_literal_type_1,
@@ -318,11 +337,23 @@ module.exports = function defineGrammar(language) {
         $.template_literal_end,
       ),
 
-      intersection_type: $ => separatedRepeat1(seq($.type), "member", '&'),
+      intersection_type: $ => prec('intersection_type', seq(
+        field('type', $.type),
+        repeat1(prec('intersection_type', seq(
+          '&',
+          field('type', $.type),
+        ))),
+      )),
 
-      union_type: $ => separatedRepeat1(seq($.type), 'member', '&'),
+      union_type: $ => prec('union_type', seq(
+        field('type', $.type),
+        repeat1(prec('union_type', seq(
+          '|',
+          field('type', $.type),
+        ))),
+      )),
 
-      function_type: $ => seq(
+      function_type: $ => prec('function_type', seq(
         optional(seq(
           optional(field('abstract', 'abstract')),
           field('new', 'new'),
@@ -333,14 +364,14 @@ module.exports = function defineGrammar(language) {
         ')',
         '=>',
         field('return_type', $.return_type),
-      ),
+      )),
 
-      readonly_type: $ => seq(
+      readonly_type: $ => prec("readonly_type", seq(
         'readonly',
         field('type', $.type),
-      ),
+      )),
 
-      infer_type: $ => seq(
+      infer_type: $ => prec('infer_type', seq(
         'infer',
         field('type', $.identifier),
         optional(seq(
@@ -351,7 +382,7 @@ module.exports = function defineGrammar(language) {
             field('constraints', $.type),
           )),
         )),
-      ),
+      )),
 
       number_literal_type: $ => $.number,
 

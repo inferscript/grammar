@@ -44,8 +44,14 @@
     }
   },
   "scripts": {
-    "build": "(cd is && tree-sitter build) && (cd isd && tree-sitter build) && (cd isx && tree-sitter build)",
-    "generate": "(cd is && tree-sitter generate) && (cd isd && tree-sitter generate) && (cd isx && tree-sitter generate)",
+    "build:is": "cd is && tree-sitter build",
+    "build:isx": "cd isx && tree-sitter build",
+    "build:isd": "cd isd && tree-sitter build",
+    "build": "npm run build:is && npm run build:isx && npm run build:isd",
+    "generate:is": "cd is && tree-sitter generate",
+    "generate:isx": "cd isx && tree-sitter generate",
+    "generate:isd": "cd isd && tree-sitter generate",
+    "generate": "npm run generate:is && npm run generate:isx && npm run generate:isd",
     "install": "node-gyp-build",
     "prestart": "tree-sitter build --wasm",
     "start": "tree-sitter playground",
