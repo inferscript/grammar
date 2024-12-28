@@ -95,6 +95,10 @@ module.exports = function defineGrammar(language) {
         field('name', $.identifier),
         field('type_parameters', optional($.type_parameters)),
         optional(seq(
+          'extends',
+          field('extends', $.type),
+        )),
+        optional(seq(
           'constraints',
           field('constraints', $.type),
         )),
@@ -123,7 +127,6 @@ module.exports = function defineGrammar(language) {
         $.intersection_type,
         $.union_type,
         $.function_type,
-        $.constructor_type,
         $.readonly_type,
         $.infer_type,
         'const',
@@ -315,9 +318,48 @@ module.exports = function defineGrammar(language) {
         $.template_literal_end,
       ),
 
+      intersection_type: $ => separatedRepeat1(seq($.type), "member", '&'),
+
+      union_type: $ => separatedRepeat1(seq($.type), 'member', '&'),
+
+      function_type: $ => seq(
+        optional(seq(
+          optional(field('abstract', 'abstract')),
+          field('new', 'new'),
+        )),
+        optional(field('type_parameters', $.type_parameters)),
+        '(',
+        separatedRepeat($.parameter, "parameter"),
+        ')',
+        '=>',
+        field('return_type', $.return_type),
+      ),
+
+      readonly_type: $ => seq(
+        'readonly',
+        field('type', $.type),
+      ),
+
+      infer_type: $ => seq(
+        'infer',
+        field('type', $.identifier),
+        optional(seq(
+          'extends',
+          field('extends', $.type),
+          optional(seq(
+            'constraints',
+            field('constraints', $.type),
+          )),
+        )),
+      ),
+
+      number_literal_type: $ => $.number,
+
+      string_literal_type: $ => $.string,
+
       // Basic tokens
-      identifier: $ => /[a-zA-Z_@#$][a-zA-Z0-9@#$_]*/,
-      number: $ => /[1-9][0-9]*/,
+      identifier: $ => /[a-zA-Z_$][a-zA-Z0-9_$]*/,
+      number: $ => /[1-9]\d*(\\.\d+)?([eE]-?\d+)?|0[bB][01]+|0[oO][0-7]+|0[xX][0-9a-f]+/,
       string: $ => /"([^"\\]|\\.)*"/,
     },
   });
