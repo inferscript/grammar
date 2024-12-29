@@ -41,4 +41,8 @@ dist/
 
 
 # Custom
-package-lock.json
+*.lib
+*.exp
+/Cargo.lock
+/package-lock.json
+/compile_commands.json

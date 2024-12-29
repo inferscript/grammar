@@ -390,7 +390,7 @@ module.exports = function defineGrammar(language) {
 
       // Basic tokens
       identifier: $ => /[a-zA-Z_$][a-zA-Z0-9_$]*/,
-      number: $ => /[1-9]\d*(\\.\d+)?([eE]-?\d+)?|0[bB][01]+|0[oO][0-7]+|0[xX][0-9a-f]+/,
+      number: $ => /0|[1-9]\d*(\\.\d+)?([eE]-?\d+)?|0[bB][01]+|0[oO][0-7]+|0[xX][0-9a-f]+/,
       string: $ => /"([^"\\]|\\.)*"/,
     },
   });

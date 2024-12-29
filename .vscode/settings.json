@@ -11,4 +11,10 @@
     "editor.formatOnSave": true,
     "editor.defaultFormatter": "vscode.typescript-language-features",
   },
+  "[c]": {
+    "editor.formatOnSave": true,
+    "editor.defaultFormatter": "llvm-vs-code-extensions.vscode-clangd",
+  },
+  "C_Cpp.intelliSenseEngine": "disabled",
+  "sonarlint.pathToCompileCommands": "${workspaceFolder}\\compile_commands.json",
 }
