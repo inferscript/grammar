@@ -31,16 +31,32 @@ static inline void inferscript_common_deserialize(void *payload, const char *buf
 static inline bool inferscript_common_scan(void *payload, TSLexer *lexer, const bool *valid_symbols) {
   (void)payload;
 
-  // Skip whitespace and comments
+  // Skip whitespace
   while (iswspace(lexer->lookahead)) {
     lexer->advance(lexer, true);
   }
 
+  // Match TEMPLATE_LITERAL_START_END
   if (valid_symbols[TEMPLATE_LITERAL_START_END] && lexer->lookahead == '`') {
     lexer->advance(lexer, false);
-    while (lexer->lookahead != '`' && lexer->lookahead != 0) {
+
+    while (lexer->lookahead != '`' && lexer->lookahead != '$' && lexer->lookahead != 0) {
       lexer->advance(lexer, false);
     }
+
+    if (lexer->lookahead == '$') {
+      // Check for TEMPLATE_LITERAL_START
+      lexer->advance(lexer, false);
+      if (lexer->lookahead == '{') {
+        if (valid_symbols[TEMPLATE_LITERAL_START]) {
+          lexer->advance(lexer, false);
+          lexer->result_symbol = TEMPLATE_LITERAL_START;
+          return true;
+        }
+        return false;
+      }
+    }
+
     if (lexer->lookahead == '`') {
       lexer->advance(lexer, false);
       lexer->result_symbol = TEMPLATE_LITERAL_START_END;
@@ -49,11 +65,14 @@ static inline bool inferscript_common_scan(void *payload, TSLexer *lexer, const 
     return false;
   }
 
+  // Match TEMPLATE_LITERAL_START
   if (valid_symbols[TEMPLATE_LITERAL_START] && lexer->lookahead == '`') {
     lexer->advance(lexer, false);
+
     while (lexer->lookahead != '$' && lexer->lookahead != '`' && lexer->lookahead != 0) {
       lexer->advance(lexer, false);
     }
+
     if (lexer->lookahead == '$') {
       lexer->advance(lexer, false);
       if (lexer->lookahead == '{') {
@@ -65,31 +84,31 @@ static inline bool inferscript_common_scan(void *payload, TSLexer *lexer, const 
     return false;
   }
 
+  // Match TEMPLATE_LITERAL_END
   if (valid_symbols[TEMPLATE_LITERAL_END] && lexer->lookahead == '}') {
     lexer->advance(lexer, false);
+
     while (lexer->lookahead != '`' && lexer->lookahead != '$' && lexer->lookahead != 0) {
       lexer->advance(lexer, false);
     }
+
+    if (lexer->lookahead == '$') {
+      // Check for TEMPLATE_LITERAL_MIDDLE
+      lexer->advance(lexer, false);
+      if (lexer->lookahead == '{') {
+        if (valid_symbols[TEMPLATE_LITERAL_MIDDLE]) {
+          lexer->advance(lexer, false);
+          lexer->result_symbol = TEMPLATE_LITERAL_MIDDLE;
+          return true;
+        }
+        return false;
+      }
+    }
+
     if (lexer->lookahead == '`') {
       lexer->advance(lexer, false);
       lexer->result_symbol = TEMPLATE_LITERAL_END;
       return true;
-    }
-    return false;
-  }
-
-  if (valid_symbols[TEMPLATE_LITERAL_MIDDLE] && lexer->lookahead == '}') {
-    lexer->advance(lexer, false);
-    while (lexer->lookahead != '$' && lexer->lookahead != '`' && lexer->lookahead != 0) {
-      lexer->advance(lexer, false);
-    }
-    if (lexer->lookahead == '$') {
-      lexer->advance(lexer, false);
-      if (lexer->lookahead == '{') {
-        lexer->advance(lexer, false);
-        lexer->result_symbol = TEMPLATE_LITERAL_MIDDLE;
-        return true;
-      }
     }
     return false;
   }
