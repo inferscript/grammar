@@ -75,10 +75,18 @@ module.exports = function defineGrammar(language) {
     ],
 
     rules: {
-      program: $ => repeat($._top_level_statement),
+      program: $ => repeat($.statement),
 
-      _top_level_statement: $ => choice(
+      statement: $ => choice(
         $.type_alias_declaration,
+        ...(isIsd ? [
+          $.declare_variable_declaration,
+          $.declare_function_declaration,
+        ] : [
+          $.expression_statement,
+          $.export_statement,
+        ]),
+        $.export_type_statement,
       ),
 
       type_alias_declaration: $ => choice(
@@ -387,6 +395,75 @@ module.exports = function defineGrammar(language) {
       number_literal_type: $ => $.number,
 
       string_literal_type: $ => $.string,
+
+      declare_variable_declaration: $ => seq(
+        optional(field('export', 'export')),
+        'declare',
+        field('val', choice('let', 'const')),
+        field('name', $.identifier),
+        optional(field('optional', '?')),
+        ':',
+        field('type', $.type),
+        ';',
+      ),
+
+      declare_function_declaration: $ => seq(
+        optional(field('export', 'export')),
+        'declare',
+        'function',
+        optional(field('type_parameters', $.type_parameters)),
+        '(',
+        separatedRepeat($.parameter, "parameter"),
+        ')',
+        ':',
+        field('return_type', $.return_type),
+      ),
+
+      expression: $ => choice(
+        $.identifier,
+        // TODO: ...
+      ),
+
+      expression_statement: $ => seq(
+        $.expression,
+        ';'
+      ),
+
+      export_statement: $ => seq(
+        'export',
+        '{',
+        separatedRepeat(choice(
+          field('identifier', seq(optional(field('type', 'type')), $.identifier)),
+          field('type', seq(
+            'type',
+            field('value', $.type),
+            'as',
+            field('name', $.identifier),
+          )),
+          field('value', seq(
+            field('value', $.expression),
+            'as',
+            field('name', $.identifier),
+          )),
+        ), 'export'),
+        '}',
+      ),
+
+      export_type_statement: $ => seq(
+        'export',
+        'type',
+        '{',
+        separatedRepeat(choice(
+          field('identifier', $.identifier),
+          field('type', seq(
+            field('value', $.type),
+            'as',
+            field('name', $.identifier),
+          )),
+        ), 'export'),
+        '}',
+        ';',
+      ),
 
       // Basic tokens
       identifier: $ => /[a-zA-Z_$][a-zA-Z0-9_$]*/,
