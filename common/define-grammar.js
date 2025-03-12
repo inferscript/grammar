@@ -46,6 +46,11 @@ module.exports = function defineGrammar(language) {
       $.template_literal_middle,
     ],
 
+    extras: $ => [
+      $.comment,
+      /\s/,
+    ],
+
     conflicts: $ => [
       [$.named_parameter, $.type, $.expression],
       [$.unnamed_parameter, $.parenthesized_type],
@@ -91,8 +96,16 @@ module.exports = function defineGrammar(language) {
       [$.type, $.type_predicate],
       [$.type, $.type_predicate, $.expression],
       [$.call_expression, $.binary_expression_comma],
-      ...(isIsd ? [] : [[$.type_alias_declaration, $.type]]),
       [$.binary_expression_comma],
+      ...(isIsd ? [] : [
+        [$.type_alias_declaration, $.type],
+        [$.template_literal_type_1, $.template_literal_1],
+        [$.literal_type, $.expression],
+        [$.object_type, $.object_literal],
+        [$.object_type_field, $.object_literal_field],
+        [$.tuple_type, $.list_literal],
+        [$.object_type_mapped_field, $.expression],
+      ]),
     ],
 
     precedences: $ => [
@@ -134,6 +147,8 @@ module.exports = function defineGrammar(language) {
         'expression_assignment_and_miscellaneous',
         'expression_miscellaneous2', // TODO: rename
         'expression_miscellaneous3', // TODO: rename
+        'object_literal',
+        'list_literal',
         'binary_expression_comma',
         'function_expression',
         'arrow_function_expression',
@@ -367,10 +382,7 @@ module.exports = function defineGrammar(language) {
       literal_type: $ => choice(
         $.number_literal_type,
         $.string_literal_type,
-        'true',
-        'false',
-        'null',
-        'undefined',
+        $.value_literal,
       ),
 
       negated_type: $ => prec('negated_type', seq(
@@ -490,6 +502,10 @@ module.exports = function defineGrammar(language) {
         $.identifier,
         $.number,
         $.string,
+        $.value_literal,
+        $.object_literal,
+        $.list_literal,
+        $.template_literal,
         $.parenthesized_expression,
         $.indexed_expression,
         $.member_expression,
@@ -505,6 +521,62 @@ module.exports = function defineGrammar(language) {
         'return',
         'break',
         'continue',
+      ),
+
+      object_literal: $ => seq(
+        '{',
+        separatedRepeat($._object_literal_field, 'field', ','),
+        '}',
+      ),
+
+      _object_literal_field: $ => choice(
+        $.object_literal_field,
+        $.object_literal_mapped_field,
+      ),
+
+      object_literal_field: $ => prec('object_literal', seq(
+        field('key', $.identifier),
+        optional(seq(':', field('value', $.expression))),
+      )),
+
+      object_literal_mapped_field: $ => prec('object_literal', seq(
+        '[',
+        field('key', $.expression),
+        ']',
+        ':',
+        field('value', $.expression),
+      )),
+
+      list_literal: $ => seq(
+        '[',
+        optional(seq(
+          field('items', $.expression),
+          repeat(prec('list_literal', seq(
+            ',',
+            field('items', $.expression),
+          ))),
+          optional(','),
+        )),
+        ']',
+      ),
+
+      template_literal: $ => choice(
+        $.template_literal_1,
+        $.template_literal_n,
+      ),
+
+      template_literal_1: $ => seq(
+        $.template_literal_start_end,
+      ),
+
+      template_literal_n: $ => seq(
+        $.template_literal_start,
+        $.expression,
+        repeat(seq(
+          $.template_literal_middle,
+          $.expression,
+        )),
+        $.template_literal_end,
       ),
 
       parenthesized_expression: $ => seq('(', $.expression, ')'),
@@ -716,9 +788,18 @@ module.exports = function defineGrammar(language) {
       ),
 
       // Basic tokens
-      identifier: $ => /[a-zA-Z_$][a-zA-Z0-9_$]*/,
-      number: $ => /0|[1-9]\d*(\\.\d+)?([eE]-?\d+)?|0[bB][01]+|0[oO][0-7]+|0[xX][0-9a-f]+/,
-      string: $ => /"([^"\\]|\\.)*"/,
+      identifier: _ => /[a-zA-Z_$][a-zA-Z0-9_$]*/,
+      number: _ => /0|[1-9]\d*(\\.\d+)?([eE]-?\d+)?|0[bB][01]+|0[oO][0-7]+|0[xX][0-9a-f]+/,
+      string: _ => /"([^"\\]|\\.)*"/,
+      value_literal: _ => /true|false|null|undefined/,
+      comment: _ => token(choice(
+        seq('//', /[^\r\n]*/),
+        seq(
+          '/*',
+          /[^*]*\*+([^/*][^*]*\*+)*/,
+          '/',
+        ),
+      )),
     },
   });
 }
