@@ -47,11 +47,52 @@ module.exports = function defineGrammar(language) {
     ],
 
     conflicts: $ => [
-      [$.named_parameter, $.type],
+      [$.named_parameter, $.type, $.expression],
       [$.unnamed_parameter, $.parenthesized_type],
       [$.infer_type],
       [$.intersection_type],
       [$.union_type],
+      [$.type, $.expression],
+      [$.type, $.named_parameter],
+      [$.expression, $.number_literal_type],
+      [$.expression, $.string_literal_type],
+      [$.expression, $.export_statement],
+      [$.expression, $.type_parameter],
+      [$.expression, $.expression_miscellaneous3],
+      [$.call_expression, $.unary_expression, $.binary_expression_relational],
+      [$.member_expression, $.call_expression, $.unary_expression, $.expression_assignment_and_miscellaneous],
+      [$.unary_expression, $.binary_expression_logical_or],
+      [$.typeof_type, $.expression],
+      [$.member_expression, $.call_expression, $.binary_expression_relational, $.expression_assignment_and_miscellaneous],
+      [$.unary_expression, $.binary_expression_relational, $.binary_expression_logical_or],
+      [$.call_expression, $.binary_expression_additive, $.binary_expression_relational],
+      [$.member_expression, $.call_expression, $.binary_expression_additive, $.expression_assignment_and_miscellaneous],
+      [$.unary_expression, $.binary_expression_additive, $.binary_expression_logical_or],
+      [$.member_expression, $.call_expression, $.binary_expression_bitwise_and, $.expression_assignment_and_miscellaneous],
+      [$.unary_expression, $.binary_expression_bitwise_and, $.binary_expression_logical_or],
+      [$.member_expression, $.call_expression, $.binary_expression_bitwise_or, $.expression_assignment_and_miscellaneous],
+      [$.unary_expression, $.binary_expression_bitwise_or, $.binary_expression_logical_or],
+      [$.member_expression, $.call_expression, $.binary_expression_logical_or, $.expression_assignment_and_miscellaneous],
+      [$.call_expression, $.binary_expression_exponentiation, $.binary_expression_relational],
+      [$.member_expression, $.call_expression, $.binary_expression_exponentiation, $.expression_assignment_and_miscellaneous],
+      [$.unary_expression, $.binary_expression_exponentiation, $.binary_expression_logical_or],
+      [$.call_expression, $.binary_expression_multiplicative, $.binary_expression_relational],
+      [$.member_expression, $.call_expression, $.binary_expression_multiplicative, $.expression_assignment_and_miscellaneous],
+      [$.unary_expression, $.binary_expression_multiplicative, $.binary_expression_logical_or],
+      [$.call_expression, $.binary_expression_bitwise_shift, $.binary_expression_relational],
+      [$.member_expression, $.call_expression, $.binary_expression_bitwise_shift, $.expression_assignment_and_miscellaneous],
+      [$.unary_expression, $.binary_expression_bitwise_shift, $.binary_expression_logical_or],
+      [$.member_expression, $.call_expression, $.binary_expression_equality, $.expression_assignment_and_miscellaneous],
+      [$.unary_expression, $.binary_expression_equality, $.binary_expression_logical_or],
+      [$.member_expression, $.call_expression, $.binary_expression_bitwise_xor, $.expression_assignment_and_miscellaneous],
+      [$.unary_expression, $.binary_expression_bitwise_xor, $.binary_expression_logical_or],
+      [$.member_expression, $.call_expression, $.binary_expression_logical_and, $.expression_assignment_and_miscellaneous],
+      [$.unary_expression, $.binary_expression_logical_and, $.binary_expression_logical_or],
+      [$.type, $.type_predicate],
+      [$.type, $.type_predicate, $.expression],
+      [$.call_expression, $.binary_expression_comma],
+      ...(isIsd ? [] : [[$.type_alias_declaration, $.type]]),
+      [$.binary_expression_comma],
     ],
 
     precedences: $ => [
@@ -71,6 +112,31 @@ module.exports = function defineGrammar(language) {
         'intersection_type',
         'union_type',
         'conditional_type',
+      ],
+      [
+        'indexed_expression',
+        'member_expression',
+        'call_expression',
+        'new_expression',
+        'unary_expression_postfix',
+        'unary_expression_prefix',
+        'binary_expression_exponentiation',
+        'binary_expression_multiplicative',
+        'binary_expression_additive',
+        'binary_expression_bitwise_shift',
+        'binary_expression_relational',
+        'binary_expression_equality',
+        'binary_expression_bitwise_and',
+        'binary_expression_bitwise_xor',
+        'binary_expression_bitwise_or',
+        'binary_expression_logical_and',
+        'binary_expression_logical_or',
+        'expression_assignment_and_miscellaneous',
+        'expression_miscellaneous2', // TODO: rename
+        'expression_miscellaneous3', // TODO: rename
+        'binary_expression_comma',
+        'function_expression',
+        'arrow_function_expression',
       ],
     ],
 
@@ -201,8 +267,10 @@ module.exports = function defineGrammar(language) {
           field('asserts', 'asserts')
         )),
         field('name', $.identifier),
-        'is',
-        field('asserts_type', $.type),
+        optional(seq(
+          'is',
+          field('asserts_type', $.type),
+        )),
       )),
 
       parameter: $ => choice(
@@ -271,9 +339,7 @@ module.exports = function defineGrammar(language) {
 
       generic_type: $ => prec('generic_type', seq(
         field('type', $.type),
-        '<',
-        separatedRepeat1($.type, 'type_parameter'),
-        '>',
+        $.type_parameters,
       )),
 
       array_type: $ => seq(
@@ -411,6 +477,7 @@ module.exports = function defineGrammar(language) {
         optional(field('export', 'export')),
         'declare',
         'function',
+        field('name', $.identifier),
         optional(field('type_parameters', $.type_parameters)),
         '(',
         separatedRepeat($.parameter, "parameter"),
@@ -421,8 +488,190 @@ module.exports = function defineGrammar(language) {
 
       expression: $ => choice(
         $.identifier,
-        // TODO: ...
+        $.number,
+        $.string,
+        $.parenthesized_expression,
+        $.indexed_expression,
+        $.member_expression,
+        $.call_expression,
+        $.new_expression,
+        $.unary_expression,
+        $.binary_expression,
+        $.expression_assignment_and_miscellaneous,
+        $.expression_miscellaneous2,
+        $.expression_miscellaneous3,
+        $.function_expression,
+        $.arrow_function_expression,
+        'return',
+        'break',
+        'continue',
       ),
+
+      parenthesized_expression: $ => seq('(', $.expression, ')'),
+
+      indexed_expression: $ => prec('indexed_expression', seq(
+        field('expression', $.expression),
+        '[',
+        field('subscript', $.expression),
+        ']',
+      )),
+
+      member_expression: $ => prec('member_expression', seq(
+        field('expression', $.expression),
+        optional('?'),
+        '.',
+        field('field', $.identifier),
+      )),
+
+      call_expression: $ => prec('call_expression', seq(
+        field('expression', $.expression),
+        optional(seq('?', '.')),
+        optional($.type_parameters),
+        '(',
+        separatedRepeat($.expression, 'args'),
+        ')',
+      )),
+
+      new_expression: $ => prec('new_expression', seq(
+        'new',
+        field('expression', $.expression),
+        optional($.type_parameters),
+        '(',
+        separatedRepeat($.expression, 'args'),
+        ')',
+      )),
+
+      unary_expression: $ => choice(
+        prec('unary_expression_postfix', seq(
+          field('expression', $.expression),
+          field('operator', choice('++', '--', '!', '??', '!!')),
+        )),
+        prec('unary_expression_prefix', seq(
+          field('operator', choice('++', '--', '!', '~', '+', '-', 'typeof', 'void', 'delete')),
+          field('expression', $.expression),
+        )),
+      ),
+
+      binary_expression: $ => choice(
+        $.binary_expression_exponentiation,
+        $.binary_expression_multiplicative,
+        $.binary_expression_additive,
+        $.binary_expression_bitwise_shift,
+        $.binary_expression_relational,
+        $.binary_expression_equality,
+        $.binary_expression_bitwise_and,
+        $.binary_expression_bitwise_xor,
+        $.binary_expression_bitwise_or,
+        $.binary_expression_logical_and,
+        $.binary_expression_logical_or,
+        $.binary_expression_comma,
+      ),
+      binary_expression_exponentiation: $ => prec.right('binary_expression_exponentiation', seq(
+        field('lhs', $.expression),
+        field('operator', '**'),
+        field('rhs', $.expression),
+      )),
+      binary_expression_multiplicative: $ => prec.left('binary_expression_multiplicative', seq(
+        field('lhs', $.expression),
+        field('operator', choice('*', '/', '%')),
+        field('rhs', $.expression),
+      )),
+      binary_expression_additive: $ => prec.left('binary_expression_additive', seq(
+        field('lhs', $.expression),
+        field('operator', choice('+', '-')),
+        field('rhs', $.expression),
+      )),
+      binary_expression_bitwise_shift: $ => prec.left('binary_expression_bitwise_shift', seq(
+        field('lhs', $.expression),
+        field('operator', choice('<<', '>>', '>>>')),
+        field('rhs', $.expression),
+      )),
+      binary_expression_relational: $ => prec.left('binary_expression_relational', seq(
+        field('lhs', $.expression),
+        field('operator', choice('<', '<=', '>', '>=', 'in', 'instanceof')),
+        field('rhs', $.expression),
+      )),
+      binary_expression_equality: $ => prec.left('binary_expression_equality', seq(
+        field('lhs', $.expression),
+        field('operator', choice('==', '!=')),
+        field('rhs', $.expression),
+      )),
+      binary_expression_bitwise_and: $ => prec.left('binary_expression_bitwise_and', seq(
+        field('lhs', $.expression),
+        field('operator', '&'),
+        field('rhs', $.expression),
+      )),
+      binary_expression_bitwise_xor: $ => prec.left('binary_expression_bitwise_xor', seq(
+        field('lhs', $.expression),
+        field('operator', '^'),
+        field('rhs', $.expression),
+      )),
+      binary_expression_bitwise_or: $ => prec.left('binary_expression_bitwise_or', seq(
+        field('lhs', $.expression),
+        field('operator', '|'),
+        field('rhs', $.expression),
+      )),
+      binary_expression_logical_and: $ => prec.left('binary_expression_logical_and', seq(
+        field('lhs', $.expression),
+        field('operator', '&&'),
+        field('rhs', $.expression),
+      )),
+      binary_expression_logical_or: $ => prec.left('binary_expression_logical_or', seq(
+        field('lhs', $.expression),
+        field('operator', choice('||', '??')),
+        field('rhs', $.expression),
+      )),
+      expression_assignment_and_miscellaneous: $ => prec.right('expression_assignment_and_miscellaneous', choice(
+        seq(
+          field('lhs', $.expression),
+          field('operator', choice('=', '+=', '-=', '**=', '*=', '/=', '%=', '<<=', '>>=', '>>>=', '&=', '^=', '|=', '&&=', '||=', '??=')),
+          field('rhs', $.expression),
+        ),
+        seq(
+          field('condition', $.expression),
+          '?',
+          field('if_true', $.expression),
+          ':',
+          field('if_false', $.expression),
+        ),
+      )),
+      expression_miscellaneous2: $ => prec('expression_miscellaneous2', seq(
+        field('operator', choice('yield', seq('yield', '*'))),
+        field('expression', $.expression),
+      )),
+      expression_miscellaneous3: $ => prec('expression_miscellaneous3', seq(
+        field('operator', choice('return', 'throw', 'break')),
+        field('expression', $.expression),
+      )),
+      binary_expression_comma: $ => prec.left('binary_expression_comma', seq(
+        field('lhs', $.expression),
+        field('operator', ','),
+        field('rhs', $.expression),
+      )),
+
+      function_expression: $ => prec('function_expression', seq(
+        'function',
+        optional(field('name', $.identifier)),
+        optional(field('type_parameters', $.type_parameters)),
+        '(',
+        separatedRepeat($.parameter, "parameter"),
+        ')',
+        ':',
+        field('return_type', $.return_type),
+        choice(
+          seq('{', repeat($.statement), optional($.expression), '}'),
+          seq('=>', $.expression),
+        ),
+      )),
+
+      arrow_function_expression: $ => prec('arrow_function_expression', seq(
+        optional(field('type_parameters', $.type_parameters)),
+        '(',
+        separatedRepeat($.parameter, "parameter"),
+        ')',
+        '=>',
+        $.expression,
+      )),
 
       expression_statement: $ => seq(
         $.expression,
@@ -440,13 +689,14 @@ module.exports = function defineGrammar(language) {
             'as',
             field('name', $.identifier),
           )),
-          field('value', seq(
+          field('expression', seq(
             field('value', $.expression),
             'as',
             field('name', $.identifier),
           )),
         ), 'export'),
         '}',
+        ';',
       ),
 
       export_type_statement: $ => seq(
